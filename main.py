@@ -73,10 +73,10 @@ def main(args):
     # CNN
     if args.verbose:
         print('Architecture: {}'.format(args.arch))
-    model = models.__dict__[args.arch](sobel=args.sobel)
-    fd = int(model.top_layer.weight.size()[1])
+    model = models.__dict__[args.arch](sobel=args.sobel)       ## 似乎用的package的__dict__，暂且没验证
+    fd = int(model.top_layer.weight.size()[1])             ## top_layer：nn.Linear(4096,out_features=1000)   >>>model.top_layer.weight.shape    (1000, 4096)
     model.top_layer = None
-    model.features = torch.nn.DataParallel(model.features)
+    model.features = torch.nn.DataParallel(model.features)   ## torch.nn.DataParallel(nn.Module)方法是针对module进行操作的，将同一module复制到不同的gpu上，分布计算
     model.cuda()
     cudnn.benchmark = True
 
@@ -116,12 +116,12 @@ def main(args):
     # creating cluster assignments log
     cluster_log = Logger(os.path.join(args.exp, 'clusters'))
 
-    # preprocessing of data
+    # preprocessing of data                                              ## img data preprocess
     normalize = transforms.Normalize(mean=[0.485, 0.456, 0.406],
                                      std=[0.229, 0.224, 0.225])
     tra = [transforms.Resize(256),
            transforms.CenterCrop(224),
-           transforms.ToTensor(),
+           transforms.ToTensor(),                                        ## 图像读取出的结果一般是[H,W,C], transforms.ToTensor()(img)将img转为tensor同时，转为[C,H,W]
            normalize]
 
     # load the data
@@ -132,14 +132,14 @@ def main(args):
 
     dataloader = torch.utils.data.DataLoader(dataset,
                                              batch_size=args.batch,
-                                             num_workers=args.workers,
+                                             num_workers=args.workers,           ## num_workers as a positive integer will turn on multi-process data loading with the specified number of loader worker processes.
                                              pin_memory=True)
 
     # clustering algorithm to use
-    deepcluster = clustering.__dict__[args.clustering](args.nmb_cluster)
+    deepcluster = clustering.__dict__[args.clustering](args.nmb_cluster)   ## 聚类对象实例
 
     # training convnet with DeepCluster
-    for epoch in range(args.start_epoch, args.epochs):
+    for epoch in range(args.start_epoch, args.epochs):                         ## 每个epoch  先执行一次clusting 然后再使用pseudo labels去train
         end = time.time()
 
         # remove head
@@ -212,7 +212,7 @@ def main(args):
         cluster_log.log(deepcluster.images_lists)
 
 
-def train(loader, model, crit, opt, epoch):
+def train(loader, model, crit, opt, epoch):                                          ## 使用pseudo labels训练
     """Training of the CNN.
         Args:
             loader (torch.utils.data.DataLoader): Data loader
@@ -290,7 +290,7 @@ def train(loader, model, crit, opt, epoch):
 
     return losses.avg
 
-def compute_features(dataloader, model, N):
+def compute_features(dataloader, model, N):                                   ## 计算出data的所有feature
     if args.verbose:
         print('Compute features')
     batch_time = AverageMeter()
