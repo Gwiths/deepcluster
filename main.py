@@ -144,7 +144,7 @@ def main(args):
 
         # remove head
         model.top_layer = None
-        model.classifier = nn.Sequential(*list(model.classifier.children())[:-1])
+        model.classifier = nn.Sequential(*list(model.classifier.children())[:-1])     ## 去除top_layer同时去除classifier的最后一个nn.ReLU
 
         # get the features for the whole dataset
         features = compute_features(dataloader, model, len(dataset))
@@ -172,11 +172,11 @@ def main(args):
             pin_memory=True,
         )
 
-        # set last fully connected layer
-        mlp = list(model.classifier.children())
+        # set last fully connected layer                                            
+        mlp = list(model.classifier.children())                                         ## 把第一步中将classifier中去除的nn.ReLU层补回来
         mlp.append(nn.ReLU(inplace=True).cuda())
         model.classifier = nn.Sequential(*mlp)
-        model.top_layer = nn.Linear(fd, len(deepcluster.images_lists))
+        model.top_layer = nn.Linear(fd, len(deepcluster.images_lists))                  ## 值得注意的是，分类器最后一层top_layer的out_channel为k
         model.top_layer.weight.data.normal_(0, 0.01)
         model.top_layer.bias.data.zero_()
         model.top_layer.cuda()
